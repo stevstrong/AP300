@@ -16,3 +16,6 @@ Needles to say that you can use another controller board instead of Arduino Pro 
 However, keep in mind that the nRF905 module should be supplied with 3.3V, so it would be preferable to use the same supply voltage for your controller as well. Alternatively, if your controller board works with 5V, you could use a level shifter to adapt the SPI lines from 5V to 3.3V, but this will be not discussed and you will get no support here.
 
 Furthermore, the interface to the PC can be replaced by a WiFi<->Serial bridge (I actually intend to do this). In this case your AP300 device turns out to be controllable on your home network over a web interface (I will come back later to this).
+
+The software is based on the nRF905 library from zkemble (https://github.com/zkemble/nRF905).
+However, I had to make some changes on this because the monitoring speed of the received data in this case was not satisfactory. Currently the reception only works interrupt-based, and the data is stored sequentially in a 4x32 byte large ring-buffer.
