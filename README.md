@@ -10,7 +10,7 @@ Another advantage of this project is that there is no need to open the AP300 cas
 This project is based on an Arduino Pro Mini board equipped with an ATmega328P serving as main controller, which is connected via SPI to the RF module with an nRF905 chip (http://www.fasttech.com/product/1380701-nrf905-arduino-compatible-wireless-communication).
 Both modules are supplied with 3.3V.
 The Arduino board is connected to the PC via a USB->Serial converter module which allows easy SW upload from Arduino IDE.
-The data received over the RF module is "sniffed" in a first instance by Arduino and transmitted to the PC, where the data is displayed in a serial terminal software window (RealTerm in my case).
+The data received over the RF module is "sniffed" in a first instance by Arduino and transmitted to the PC, where the data is displayed in a serial terminal window (Arduino IDE serial monitor, RealTerm, ...).
 
 Needles to say that you can use another controller board instead of Arduino Pro Mini.
 However, keep in mind that the nRF905 module should be supplied with 3.3V, so it would be preferable to use the same supply voltage for your controller as well. Alternatively, if your controller board works with 5V, you could use a level shifter to adapt the SPI lines from 5V to 3.3V, but this will be not discussed and you will get no support here.
