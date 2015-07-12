@@ -115,71 +115,6 @@ static void spi_transfer_nr(uint8_t cmd, uint8_t * address, uint8_t len)
 	SPI_DESELECT();
 }
 
-#if 0
-///////////////////////////////////////////////////////////
-void nRF905_init()
-{
-#ifdef ARDUINO
-	pinMode(TRX_EN, OUTPUT);
-	pinMode(PWR_MODE, OUTPUT);
-	pinMode(TX_EN, OUTPUT);
-
-#if NRF905_COLLISION_AVOID
-	pinMode(CD, INPUT);
-#endif
-
-#if AM_IS_USED_HW
-	pinMode(AM, INPUT);
-#endif
-
-#if !NRF905_DR_SW
-	pinMode(DR, INPUT);
-#endif
-
-	pinMode(CSN, OUTPUT);
-	digitalWrite(CSN, HIGH);
-
-	SPI.begin();
-	SPI.setClockDivider(SPI_CLOCK_DIV2);
-#else
-	TRX_EN_DDR |= _BV(TRX_EN_BIT);
-	PWR_MODE_DDR |= _BV(PWR_MODE_BIT);
-	TX_EN_DDR |= _BV(TX_EN_BIT);
-
-#if NRF905_COLLISION_AVOID
-	CD_DDR &= ~_BV(CD_BIT);
-#endif
-
-#if AM_IS_USED_HW
-	AM_DDR &= ~_BV(AM_BIT);
-#endif
-
-#if !NRF905_DR_SW
-	DR_DDR &= ~_BV(DR_BIT);
-#endif
-
-	spi_init();
-#endif
-
-	radio.state = NRF905_RADIO_STATE_IDLE;
-
-	// Startup
-	ENABLE_STANDBY_MODE();
-	RECEIVE_MODE();
-	nRF905_powerDown();
-	_delay_ms(3);
-	defaultConfig();
-
-#if NRF905_INTERRUPTS
-	// Set interrupts
-	REG_EXTERNAL_INT_CTL |= BIT_EXTERNAL_INT_CTL;
-	nRF905_interrupt_on();
-#endif
-
-	nRF905_powerUp();
-}
-#endif
-
 // Set frequency, workout the channel from the frequency
 void nRF905_setFrequency(nRF905_band_t band, uint32_t freq)
 {
@@ -187,46 +122,6 @@ void nRF905_setFrequency(nRF905_band_t band, uint32_t freq)
 }
 
 ///////////////////////////////////////////////////////////////////////////
-#if 0
-// Set channel
-void nRF905_setChannel(nRF905_band_t band, uint16_t channel)
-{
-	config.reg1 = (config.reg1 & NRF905_MASK_CHANNEL) | band | ((channel>>8) & 0x01);
-
-	SPI_SELECT();
-	spi_transfer(NRF905_CMD_W_CONFIG | NRF905_REG_CHANNEL);
-	spi_transfer(channel);
-	spi_transfer(config.reg1);
-	SPI_DESELECT();
-}
-
-// Set auto retransmit
-void nRF905_setAutoRetransmit(nRF905_auto_retran_t val)
-{
-	setConfigReg1(val, NRF905_MASK_AUTO_RETRAN, NRF905_REG_AUTO_RETRAN);
-}
-// Set low power receive
-void nRF905_setLowRxPower(nRF905_low_rx_t val)
-{
-	setConfigReg1(val, NRF905_MASK_LOW_RX, NRF905_REG_LOW_RX);
-}
-// Set output power
-void nRF905_setTransmitPower(nRF905_pwr_t val)
-{
-	setConfigReg1(val, NRF905_MASK_PWR, NRF905_REG_PWR);
-}
-// Set CRC
-void nRF905_setCRC(nRF905_crc_t val)
-{
-	setConfigReg2(val, NRF905_MASK_CRC, NRF905_REG_CRC);
-}
-// Set clock output
-void nRF905_setClockOut(nRF905_outclk_t val)
-{
-	setConfigReg2(val, NRF905_MASK_OUTCLK, NRF905_REG_OUTCLK);
-}
-#endif
-//////////////////////////////////////////////////////////////////////
 void nRF905_setConfigReg0(uint8_t val)
 {
 	setConfigRegister(NRF905_CMD_W_CONFIG, val);
@@ -277,55 +172,6 @@ void nRF905_flushRecBuffer(void)
 	rxReadPtr = 0;
 }
 
-#if 0
-// Set configuration
-// Radio should be in standby mode and interrupts disabled
-static noinline void defaultConfig()
-{
-	uint16_t channel = NRF905_CALC_CHANNEL(NRF905_FREQ, NRF905_BAND);
-	uint8_t reg1 = NRF905_AUTO_RETRAN | NRF905_LOW_RX | NRF905_PWR | NRF905_BAND | ((channel>>8) & 0x01);
-	uint8_t reg2 = NRF905_CRC | NRF905_CLK_FREQ | NRF905_OUTCLK;
-
-	config.reg1 = reg1;
-	config.reg2 = reg2;
-	config.payloadSize = NRF905_PAYLOAD_SIZE;
-	
-	// Set control registers
-	SPI_SELECT();
-	spi_transfer_nr(NRF905_CMD_W_CONFIG);
-	spi_transfer_nr(channel);
-	spi_transfer_nr(reg1);
-	spi_transfer_nr((NRF905_ADDR_SIZE<<4) | NRF905_ADDR_SIZE);
-	spi_transfer_nr(NRF905_PAYLOAD_SIZE); // RX payload size
-	spi_transfer_nr(NRF905_PAYLOAD_SIZE); // TX payload size
-	for(uint8_t i=4;i--;)
-		spi_transfer_nr(0xE7); // Default receive address
-	spi_transfer_nr(reg2);
-	SPI_DESELECT();
-
-	// Default transmit address
-	SPI_SELECT();
-	spi_transfer_nr(NRF905_CMD_W_TX_ADDRESS);
-	for(uint8_t i=4;i--;)
-		spi_transfer_nr(0xE7);
-	SPI_DESELECT();
-	
-	// Clear transmit payload
-	SPI_SELECT();
-	spi_transfer_nr(NRF905_CMD_W_TX_PAYLOAD);
-	for(uint8_t i=NRF905_MAX_PAYLOAD;i--;)
-		spi_transfer_nr(0x00);
-	SPI_DESELECT();
-
-	// Clear DR by reading receive payload
-	SPI_SELECT();
-	spi_transfer_nr(NRF905_CMD_R_RX_PAYLOAD);
-	for(uint8_t i=NRF905_MAX_PAYLOAD;i--;)
-		spi_transfer_nr(NRF905_CMD_NOP);
-	SPI_DESELECT();
-}
-#endif
-
 // Payload size
 void nRF905_setPayloadSizes(uint8_t size)
 {
@@ -363,17 +209,6 @@ void nRF905_enterStandBy()
 	radio.state = NRF905_RADIO_STATE_STANDBY;
 }
 
-/*
-// 
-void nRF905_setAddressSize(uint8_t size)
-{
-	CHIPSELECT(STANDBY)
-	{
-		spi_transfer_nr(NRF905_CMD_W_CONFIG | NRF905_REG_ADDR_WIDTH);
-		spi_transfer_nr((size<<4) | size);
-	}
-}
-*/
 // Set address
 static void setAddress(uint8_t cmd, uint8_t * address)
 {
@@ -483,18 +318,12 @@ nRF905_radio_state_t nRF905_getState(void)
 // Put into receive mode
 void nRF905_receive(void)
 {
-//	NRF905_ATOMIC()
-//	{
 	if(radio.state == NRF905_RADIO_STATE_TX) // Currently transmitting, so wait until finished then go into receive mode
 		while (nRF905_getStatus()==NRF905_RADIO_STATE_TX);	//radio.goToRxMode = true;
-//		else
-//		{
 	RECEIVE_MODE();
 	DISABLE_STANDBY_MODE();
 	radio.state = NRF905_RADIO_STATE_RX;
 	delay(1);
-//		}
-//	}
 }
 
 // Get received data if available
@@ -558,24 +387,7 @@ static uint8_t * ptr;
 	return 3;//false;
 #endif
 }
-/*
-static inline void stateTx()
-{
-	if(radio.goToRxMode)
-	{
-		// We want to go into receive mode
-		radio.goToRxMode = false;
-		RECEIVE_MODE();
-		DISABLE_STANDBY_MODE();
-		radio.state = NRF905_RADIO_STATE_RX;
-	}
-	else
-	{
-		// If we didn't want to go into receive mode then we're now in standby mode
-		radio.state = NRF905_RADIO_STATE_IDLE;
-	}
-}
-*/
+
 #if NEED_SW_STATUS_SUPPORT
 // Read status register
 static uint8_t readStatus()
